@@ -35,7 +35,6 @@
             margin: 0 auto;
         }
 
-        /* Fecha */
         .fecha-hoy {
             text-align: center;
             padding: 20px 16px;
@@ -66,7 +65,6 @@
             opacity: 0.9;
         }
 
-        /* Card */
         .card {
             background: var(--card);
             border-radius: 16px;
@@ -80,10 +78,7 @@
             margin-bottom: 12px;
         }
 
-        /* Textarea con mic integrado */
-        .input-area {
-            position: relative;
-        }
+        .input-area { position: relative; }
 
         textarea {
             width: 100%;
@@ -93,21 +88,16 @@
             border: 2px solid var(--border);
             border-radius: 14px;
             font-family: 'DM Sans', sans-serif;
-            font-size: 16px; /* 16px evita zoom en iOS */
+            font-size: 16px;
             resize: none;
             transition: border-color 0.2s;
             color: var(--text);
             -webkit-appearance: none;
         }
 
-        textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
+        textarea:focus { outline: none; border-color: var(--primary); }
         textarea::placeholder { color: #94a3b8; }
 
-        /* Boton microfono grande */
         .mic-btn {
             position: absolute;
             top: 8px;
@@ -155,7 +145,6 @@
             min-height: 20px;
         }
 
-        /* Botones */
         .btn {
             display: block;
             width: 100%;
@@ -172,11 +161,9 @@
         }
 
         .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.5; transform: none; }
 
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
+        .btn-primary { background: var(--primary); color: white; }
 
         .btn-secondary {
             background: var(--card);
@@ -193,11 +180,40 @@
             margin-bottom: 12px;
         }
 
-        .botones-row .btn {
-            margin-top: 0;
-            padding: 13px 8px;
-            font-size: 0.9rem;
+        .botones-row .btn { margin-top: 0; padding: 13px 8px; font-size: 0.9rem; }
+
+        /* Sync status */
+        .sync-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            min-height: 32px;
         }
+
+        .sync-bar .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .sync-bar .dot.offline { background: #f59e0b; }
+        .sync-bar .dot.error { background: var(--red); }
+
+        .sync-bar .spinning {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Toast */
         .toast {
@@ -216,9 +232,7 @@
             white-space: nowrap;
         }
 
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
 
         /* Modal */
         .overlay {
@@ -248,10 +262,7 @@
             position: relative;
         }
 
-        .modal h2 {
-            margin-bottom: 16px;
-            font-size: 1.1rem;
-        }
+        .modal h2 { margin-bottom: 16px; font-size: 1.1rem; }
 
         .modal .close-btn {
             position: absolute;
@@ -286,12 +297,8 @@
             -webkit-appearance: none;
         }
 
-        input[type="date"]:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
+        input[type="date"]:focus { outline: none; border-color: var(--primary); }
 
-        /* Historial */
         .historial-titulo {
             font-size: 1.05rem;
             margin-bottom: 12px;
@@ -344,14 +351,12 @@
 <body>
 
 <div class="container">
-    <!-- Fecha -->
     <div class="fecha-hoy">
         <div class="dia-nombre" id="diaNombre"></div>
         <div class="dia-numero" id="diaNumero"></div>
         <div class="mes-anio" id="mesAnio"></div>
     </div>
 
-    <!-- Formulario -->
     <div class="card">
         <h2>¿En que trabajaste hoy?</h2>
         <div class="input-area">
@@ -361,26 +366,24 @@
             </button>
         </div>
         <div class="mic-status" id="micStatusHoy"></div>
-        <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+        <button class="btn btn-primary" id="btnGuardar" onclick="guardar()">Guardar</button>
     </div>
 
-    <!-- Botones -->
     <div class="botones-row">
         <button class="btn btn-secondary" onclick="abrirModal()">Dia anterior</button>
         <button class="btn btn-secondary" onclick="descargarBitacora()">Descargar</button>
     </div>
 
-    <!-- Historial -->
+    <div class="sync-bar" id="syncBar"></div>
+
     <div class="card">
         <div class="historial-titulo">Registros anteriores</div>
         <div id="historial"></div>
     </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- Modal -->
 <div class="overlay" id="overlay" onclick="cerrarModal(event)">
     <div class="modal">
         <button class="close-btn" onclick="cerrarModalDirecto()">&times;</button>
@@ -400,10 +403,20 @@
 </div>
 
 <script>
+    // ============================================================
+    // CONFIGURACION - Pega tu URL de Google Apps Script aqui
+    // ============================================================
+    const APPS_SCRIPT_URL = 'PEGAR_URL_AQUI';
+    // ============================================================
+
     const DIAS = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
     const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const STORAGE_KEY = 'bitacora_registros';
 
+    let registrosCache = [];
+    let conectado = false;
+
+    // ===== FECHA =====
     function mostrarFecha() {
         const h = new Date();
         document.getElementById('diaNombre').textContent = DIAS[h.getDay()];
@@ -411,22 +424,88 @@
         document.getElementById('mesAnio').textContent = MESES[h.getMonth()] + ' ' + h.getFullYear();
     }
 
-    function getRegistros() {
-        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-        catch { return []; }
-    }
-
-    function saveRegistros(r) { localStorage.setItem(STORAGE_KEY, JSON.stringify(r)); }
-
     function fechaHoyStr() {
         const h = new Date();
         return h.getFullYear() + '-' + String(h.getMonth()+1).padStart(2,'0') + '-' + String(h.getDate()).padStart(2,'0');
     }
 
     function formatearFecha(f) {
-        const [y,m,d] = f.split('-').map(Number);
+        const [y,m,d] = String(f).split('-').map(Number);
         const fecha = new Date(y,m-1,d);
         return DIAS[fecha.getDay()] + ' ' + d + ' de ' + MESES[m-1] + ', ' + y;
+    }
+
+    // ===== SYNC STATUS =====
+    function setSyncStatus(type, msg) {
+        const bar = document.getElementById('syncBar');
+        if (type === 'loading') {
+            bar.innerHTML = '<div class="spinning"></div> ' + msg;
+        } else if (type === 'ok') {
+            bar.innerHTML = '<div class="dot"></div> ' + msg;
+            conectado = true;
+        } else if (type === 'offline') {
+            bar.innerHTML = '<div class="dot offline"></div> ' + msg;
+            conectado = false;
+        } else if (type === 'error') {
+            bar.innerHTML = '<div class="dot error"></div> ' + msg;
+        }
+    }
+
+    // ===== STORAGE LOCAL (fallback) =====
+    function getLocal() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+        catch { return []; }
+    }
+
+    function saveLocal(r) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(r));
+    }
+
+    // ===== GOOGLE SHEETS =====
+    function urlConfigurada() {
+        return APPS_SCRIPT_URL && APPS_SCRIPT_URL !== 'PEGAR_URL_AQUI';
+    }
+
+    async function cargarDesdeSheets() {
+        if (!urlConfigurada()) {
+            setSyncStatus('offline', 'Sin conexion a Google Sheets');
+            registrosCache = getLocal();
+            renderHistorial();
+            return;
+        }
+
+        setSyncStatus('loading', 'Cargando...');
+        try {
+            const res = await fetch(APPS_SCRIPT_URL);
+            const data = await res.json();
+            if (data.ok) {
+                registrosCache = data.registros;
+                saveLocal(registrosCache);
+                setSyncStatus('ok', 'Conectado a Google Sheets');
+            } else {
+                throw new Error(data.error || 'Error');
+            }
+        } catch (err) {
+            setSyncStatus('offline', 'Sin conexion - usando datos locales');
+            registrosCache = getLocal();
+        }
+        renderHistorial();
+    }
+
+    async function enviarASheets(action, datos) {
+        if (!urlConfigurada()) return false;
+
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action, ...datos })
+            });
+            const data = await res.json();
+            return data.ok;
+        } catch {
+            return false;
+        }
     }
 
     // ===== VOZ =====
@@ -471,19 +550,12 @@
                 if (e.results[i].isFinal) final += e.results[i][0].transcript;
                 else interim += e.results[i][0].transcript;
             }
-            if (final) {
-                base += sep + final;
-                sep = ' ';
-                ta.value = base;
-            }
+            if (final) { base += sep + final; sep = ' '; ta.value = base; }
             if (interim) ta.value = base + sep + interim;
         };
 
         rec.onerror = (e) => {
-            const msgs = {
-                'not-allowed': 'Permite el microfono en tu navegador',
-                'no-speech': 'No se escucho nada. Toca de nuevo.'
-            };
+            const msgs = { 'not-allowed': 'Permite el microfono en tu navegador', 'no-speech': 'No se escucho nada. Toca de nuevo.' };
             status.textContent = msgs[e.error] || 'Error: ' + e.error;
             btn.classList.remove('recording');
             recActivo = null;
@@ -492,11 +564,7 @@
 
         rec.onend = () => {
             btn.classList.remove('recording');
-            if (recActivo === rec) {
-                status.textContent = 'Listo';
-                recActivo = null;
-                setTimeout(() => status.textContent = '', 1500);
-            }
+            if (recActivo === rec) { status.textContent = 'Listo'; recActivo = null; setTimeout(() => status.textContent = '', 1500); }
         };
 
         rec.start();
@@ -504,59 +572,91 @@
     }
 
     function pararMic(bid, sid) {
-        if (recActivo) {
-            recActivo.stop();
-            recActivo = null;
-        }
+        if (recActivo) { recActivo.stop(); recActivo = null; }
         document.getElementById(bid).classList.remove('recording');
         document.getElementById(sid).textContent = '';
     }
 
     // ===== GUARDAR =====
-    function guardar() {
+    async function guardar() {
         pararMic('micBtnHoy','micStatusHoy');
-        const t = document.getElementById('textoHoy').value.trim();
-        if (!t) { document.getElementById('textoHoy').focus(); return; }
-        const r = getRegistros();
-        r.push({ fecha: fechaHoyStr(), texto: t, timestamp: Date.now() });
-        saveRegistros(r);
-        document.getElementById('textoHoy').value = '';
-        mostrarToast('Guardado');
+        const ta = document.getElementById('textoHoy');
+        const texto = ta.value.trim();
+        if (!texto) { ta.focus(); return; }
+
+        const reg = { fecha: fechaHoyStr(), texto, timestamp: Date.now() };
+        const btn = document.getElementById('btnGuardar');
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+
+        // Guardar local siempre
+        registrosCache.push(reg);
+        saveLocal(registrosCache);
         renderHistorial();
+        ta.value = '';
+
+        // Enviar a Sheets
+        const ok = await enviarASheets('agregar', reg);
+        btn.disabled = false;
+        btn.textContent = 'Guardar';
+
+        if (ok) {
+            mostrarToast('Guardado');
+            setSyncStatus('ok', 'Conectado a Google Sheets');
+        } else if (urlConfigurada()) {
+            mostrarToast('Guardado local (sin conexion)');
+            setSyncStatus('offline', 'Guardado solo localmente');
+        } else {
+            mostrarToast('Guardado');
+        }
     }
 
-    function guardarAnterior() {
+    async function guardarAnterior() {
         pararMic('micBtnAnterior','micStatusAnterior');
         const f = document.getElementById('fechaAnterior').value;
         const t = document.getElementById('textoAnterior').value.trim();
         if (!f) { document.getElementById('fechaAnterior').focus(); return; }
         if (!t) { document.getElementById('textoAnterior').focus(); return; }
-        const r = getRegistros();
-        r.push({ fecha: f, texto: t, timestamp: Date.now() });
-        saveRegistros(r);
+
+        const reg = { fecha: f, texto: t, timestamp: Date.now() };
+
+        registrosCache.push(reg);
+        saveLocal(registrosCache);
+        renderHistorial();
+
         document.getElementById('textoAnterior').value = '';
         document.getElementById('fechaAnterior').value = '';
         cerrarModalDirecto();
-        mostrarToast('Guardado');
-        renderHistorial();
+
+        const ok = await enviarASheets('agregar', reg);
+        if (ok) {
+            mostrarToast('Guardado');
+            setSyncStatus('ok', 'Conectado a Google Sheets');
+        } else if (urlConfigurada()) {
+            mostrarToast('Guardado local');
+            setSyncStatus('offline', 'Guardado solo localmente');
+        } else {
+            mostrarToast('Guardado');
+        }
     }
 
-    function eliminar(ts) {
+    async function eliminar(ts) {
         if (!confirm('¿Eliminar este registro?')) return;
-        saveRegistros(getRegistros().filter(r => r.timestamp !== ts));
+        registrosCache = registrosCache.filter(r => r.timestamp !== ts);
+        saveLocal(registrosCache);
         renderHistorial();
+        await enviarASheets('eliminar', { timestamp: ts });
     }
 
     // ===== HISTORIAL =====
     function renderHistorial() {
-        const registros = getRegistros();
         const div = document.getElementById('historial');
-        if (!registros.length) {
+        if (!registrosCache.length) {
             div.innerHTML = '<div class="vacio"><div class="icono">📋</div>Sin registros aun.<br>Escribe o dicta tu primer reporte.</div>';
             return;
         }
-        registros.sort((a,b) => b.fecha !== a.fecha ? b.fecha.localeCompare(a.fecha) : b.timestamp - a.timestamp);
-        div.innerHTML = registros.map(r => `
+        const sorted = [...registrosCache].sort((a,b) => b.fecha !== a.fecha ? b.fecha.localeCompare(a.fecha) : b.timestamp - a.timestamp);
+        div.innerHTML = sorted.map(r => `
             <div class="registro">
                 <button class="reg-delete" onclick="eliminar(${r.timestamp})">&times;</button>
                 <div class="reg-fecha">${formatearFecha(r.fecha)}</div>
@@ -568,16 +668,11 @@
 
     // ===== DESCARGAR =====
     function descargarBitacora() {
-        const registros = getRegistros();
-        if (!registros.length) { mostrarToast('No hay registros'); return; }
+        if (!registrosCache.length) { mostrarToast('No hay registros'); return; }
 
-        registros.sort((a,b) => a.fecha.localeCompare(b.fecha) || a.timestamp - b.timestamp);
-
+        const sorted = [...registrosCache].sort((a,b) => a.fecha.localeCompare(b.fecha) || a.timestamp - b.timestamp);
         const porFecha = {};
-        registros.forEach(r => {
-            if (!porFecha[r.fecha]) porFecha[r.fecha] = [];
-            porFecha[r.fecha].push(r.texto);
-        });
+        sorted.forEach(r => { if (!porFecha[r.fecha]) porFecha[r.fecha] = []; porFecha[r.fecha].push(r.texto); });
 
         let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Bitacora</title>
@@ -633,9 +728,9 @@ h1{text-align:center;font-size:1.4rem;margin-bottom:4px}
         document.getElementById('overlay').classList.remove('active');
     }
 
-    // Init
+    // ===== INIT =====
     mostrarFecha();
-    renderHistorial();
+    cargarDesdeSheets();
 </script>
 </body>
 </html>
