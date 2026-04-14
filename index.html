@@ -412,6 +412,7 @@
     const DIAS = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
     const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const STORAGE_KEY = 'bitacora_registros';
+    const PENDING_KEY = 'bitacora_pendientes';
 
     let registrosCache = [];
     let conectado = false;
@@ -459,6 +460,44 @@
 
     function saveLocal(r) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(r));
+    }
+
+    // ===== COLA DE PENDIENTES =====
+    function getPendientes() {
+        try { return JSON.parse(localStorage.getItem(PENDING_KEY)) || []; }
+        catch { return []; }
+    }
+
+    function savePendientes(p) {
+        localStorage.setItem(PENDING_KEY, JSON.stringify(p));
+    }
+
+    function agregarPendiente(reg) {
+        const p = getPendientes();
+        p.push(reg);
+        savePendientes(p);
+    }
+
+    async function sincronizarPendientes() {
+        const pendientes = getPendientes();
+        if (!pendientes.length || !urlConfigurada()) return;
+
+        setSyncStatus('loading', 'Sincronizando ' + pendientes.length + ' pendiente(s)...');
+        const fallidos = [];
+
+        for (const reg of pendientes) {
+            const ok = await enviarASheets('agregar', reg);
+            if (!ok) fallidos.push(reg);
+        }
+
+        savePendientes(fallidos);
+
+        if (!fallidos.length) {
+            setSyncStatus('ok', 'Todo sincronizado');
+            mostrarToast('Pendientes sincronizados');
+        } else {
+            setSyncStatus('offline', fallidos.length + ' pendiente(s) sin sincronizar');
+        }
     }
 
     // ===== GOOGLE SHEETS =====
@@ -604,8 +643,10 @@
             mostrarToast('Guardado');
             setSyncStatus('ok', 'Conectado a Google Sheets');
         } else if (urlConfigurada()) {
-            mostrarToast('Guardado local (sin conexion)');
-            setSyncStatus('offline', 'Guardado solo localmente');
+            agregarPendiente(reg);
+            const n = getPendientes().length;
+            mostrarToast('Guardado local (' + n + ' pendiente' + (n > 1 ? 's' : '') + ')');
+            setSyncStatus('offline', n + ' pendiente(s) por sincronizar');
         } else {
             mostrarToast('Guardado');
         }
@@ -633,8 +674,10 @@
             mostrarToast('Guardado');
             setSyncStatus('ok', 'Conectado a Google Sheets');
         } else if (urlConfigurada()) {
-            mostrarToast('Guardado local');
-            setSyncStatus('offline', 'Guardado solo localmente');
+            agregarPendiente(reg);
+            const n = getPendientes().length;
+            mostrarToast('Guardado local (' + n + ' pendiente' + (n > 1 ? 's' : '') + ')');
+            setSyncStatus('offline', n + ' pendiente(s) por sincronizar');
         } else {
             mostrarToast('Guardado');
         }
@@ -728,9 +771,28 @@ h1{text-align:center;font-size:1.4rem;margin-bottom:4px}
         document.getElementById('overlay').classList.remove('active');
     }
 
+    // ===== DETECTAR CONEXION =====
+    window.addEventListener('online', async () => {
+        if (urlConfigurada() && getPendientes().length) {
+            await sincronizarPendientes();
+            await cargarDesdeSheets();
+        } else {
+            setSyncStatus('ok', 'Conectado');
+        }
+    });
+
+    window.addEventListener('offline', () => {
+        const n = getPendientes().length;
+        setSyncStatus('offline', 'Sin conexion' + (n ? ' - ' + n + ' pendiente(s)' : ''));
+    });
+
     // ===== INIT =====
     mostrarFecha();
-    cargarDesdeSheets();
+    cargarDesdeSheets().then(() => {
+        if (conectado && getPendientes().length) {
+            sincronizarPendientes();
+        }
+    });
 </script>
 </body>
 </html>
