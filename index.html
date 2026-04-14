@@ -505,6 +505,39 @@
         return APPS_SCRIPT_URL && APPS_SCRIPT_URL !== 'PEGAR_URL_AQUI';
     }
 
+    // JSONP: evita problemas CORS con cuentas Google personales
+    let jsonpCounter = 0;
+
+    function jsonp(params) {
+        return new Promise((resolve, reject) => {
+            const cbName = '_bitacora_cb_' + (jsonpCounter++);
+            const timeout = setTimeout(() => {
+                delete window[cbName];
+                if (document.getElementById(cbName)) document.getElementById(cbName).remove();
+                reject(new Error('Timeout'));
+            }, 15000);
+
+            window[cbName] = (data) => {
+                clearTimeout(timeout);
+                delete window[cbName];
+                if (document.getElementById(cbName)) document.getElementById(cbName).remove();
+                resolve(data);
+            };
+
+            const qs = new URLSearchParams({ ...params, callback: cbName }).toString();
+            const script = document.createElement('script');
+            script.id = cbName;
+            script.src = APPS_SCRIPT_URL + '?' + qs;
+            script.onerror = () => {
+                clearTimeout(timeout);
+                delete window[cbName];
+                script.remove();
+                reject(new Error('Network error'));
+            };
+            document.body.appendChild(script);
+        });
+    }
+
     async function cargarDesdeSheets() {
         if (!urlConfigurada()) {
             setSyncStatus('offline', 'Sin conexion a Google Sheets');
@@ -515,8 +548,7 @@
 
         setSyncStatus('loading', 'Cargando...');
         try {
-            const res = await fetch(APPS_SCRIPT_URL);
-            const data = await res.json();
+            const data = await jsonp({});
             if (data.ok) {
                 registrosCache = data.registros;
                 saveLocal(registrosCache);
@@ -535,12 +567,7 @@
         if (!urlConfigurada()) return false;
 
         try {
-            const res = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action, ...datos })
-            });
-            const data = await res.json();
+            const data = await jsonp({ action, ...datos });
             return data.ok;
         } catch {
             return false;
