@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bitacora</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --success: #16a34a;
+            --red: #dc2626;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            padding: 12px;
+            padding-bottom: 100px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* Fecha */
+        .fecha-hoy {
+            text-align: center;
+            padding: 20px 16px;
+            background: var(--primary);
+            color: white;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+
+        .fecha-hoy .dia-nombre {
+            font-size: 0.85rem;
+            font-weight: 400;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .fecha-hoy .dia-numero {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 4px 0;
+        }
+
+        .fecha-hoy .mes-anio {
+            font-size: 1.1rem;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .card h2 {
+            font-size: 1.05rem;
+            margin-bottom: 12px;
+        }
+
+        /* Textarea con mic integrado */
+        .input-area {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 14px;
+            padding-right: 64px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px; /* 16px evita zoom en iOS */
+            resize: none;
+            transition: border-color 0.2s;
+            color: var(--text);
+            -webkit-appearance: none;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        textarea::placeholder { color: #94a3b8; }
+
+        /* Boton microfono grande */
+        .mic-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: #f1f5f9;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+
+        .mic-btn:active { transform: scale(0.92); }
+
+        .mic-btn.recording {
+            background: var(--red);
+            animation: pulse 1.5s infinite;
+        }
+
+        .mic-btn.recording svg { fill: white; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.35); }
+            50% { box-shadow: 0 0 0 14px rgba(220,38,38,0); }
+        }
+
+        .mic-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-light);
+            transition: fill 0.2s;
+        }
+
+        .mic-status {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--red);
+            font-weight: 500;
+            margin-top: 6px;
+            min-height: 20px;
+        }
+
+        /* Botones */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 12px;
+            touch-action: manipulation;
+        }
+
+        .btn:active { transform: scale(0.97); }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--card);
+            color: var(--text);
+            border: 2px solid var(--border);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .botones-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .botones-row .btn {
+            margin-top: 0;
+            padding: 13px 8px;
+            font-size: 0.9rem;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--success);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: transform 0.35s ease;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Modal */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 50;
+            padding: 16px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .overlay.active {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 24px;
+        }
+
+        .modal {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 480px;
+            position: relative;
+        }
+
+        .modal h2 {
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+        }
+
+        .modal .close-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--text-light);
+            line-height: 1;
+            padding: 4px 8px;
+            touch-action: manipulation;
+        }
+
+        .modal label {
+            font-weight: 500;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input[type="date"] {
+            width: 100%;
+            padding: 13px 14px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 16px;
+            color: var(--text);
+            margin-bottom: 12px;
+            -webkit-appearance: none;
+        }
+
+        input[type="date"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Historial */
+        .historial-titulo {
+            font-size: 1.05rem;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .registro {
+            border-left: 4px solid var(--primary);
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            background: var(--bg);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .registro .reg-fecha {
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .registro .reg-texto {
+            font-size: 0.95rem;
+            color: var(--text);
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .registro .reg-delete {
+            float: right;
+            background: none;
+            border: none;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 1.3rem;
+            padding: 2px 6px;
+            touch-action: manipulation;
+        }
+
+        .vacio {
+            text-align: center;
+            color: var(--text-light);
+            padding: 30px 16px;
+            font-size: 0.95rem;
+        }
+
+        .vacio .icono { font-size: 2rem; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Fecha -->
+    <div class="fecha-hoy">
+        <div class="dia-nombre" id="diaNombre"></div>
+        <div class="dia-numero" id="diaNumero"></div>
+        <div class="mes-anio" id="mesAnio"></div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="card">
+        <h2>¿En que trabajaste hoy?</h2>
+        <div class="input-area">
+            <textarea id="textoHoy" placeholder="Escribe o dicta con el microfono..."></textarea>
+            <button class="mic-btn" id="micBtnHoy" onclick="toggleMic('textoHoy','micBtnHoy','micStatusHoy')" title="Dictar">
+                <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            </button>
+        </div>
+        <div class="mic-status" id="micStatusHoy"></div>
+        <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+    </div>
+
+    <!-- Botones -->
+    <div class="botones-row">
+        <button class="btn btn-secondary" onclick="abrirModal()">Dia anterior</button>
+        <button class="btn btn-secondary" onclick="descargarBitacora()">Descargar</button>
+    </div>
+
+    <!-- Historial -->
+    <div class="card">
+        <div class="historial-titulo">Registros anteriores</div>
+        <div id="historial"></div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="cerrarModal(event)">
+    <div class="modal">
+        <button class="close-btn" onclick="cerrarModalDirecto()">&times;</button>
+        <h2>Reportar otro dia</h2>
+        <label>Fecha:</label>
+        <input type="date" id="fechaAnterior">
+        <label style="margin-top:8px;">¿En que trabajaste?</label>
+        <div class="input-area">
+            <textarea id="textoAnterior" placeholder="Escribe o dicta..." style="min-height:100px;"></textarea>
+            <button class="mic-btn" id="micBtnAnterior" onclick="toggleMic('textoAnterior','micBtnAnterior','micStatusAnterior')" title="Dictar">
+                <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            </button>
+        </div>
+        <div class="mic-status" id="micStatusAnterior"></div>
+        <button class="btn btn-primary" onclick="guardarAnterior()">Guardar</button>
+    </div>
+</div>
+
+<script>
+    const DIAS = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
+    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const STORAGE_KEY = 'bitacora_registros';
+
+    function mostrarFecha() {
+        const h = new Date();
+        document.getElementById('diaNombre').textContent = DIAS[h.getDay()];
+        document.getElementById('diaNumero').textContent = h.getDate();
+        document.getElementById('mesAnio').textContent = MESES[h.getMonth()] + ' ' + h.getFullYear();
+    }
+
+    function getRegistros() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+        catch { return []; }
+    }
+
+    function saveRegistros(r) { localStorage.setItem(STORAGE_KEY, JSON.stringify(r)); }
+
+    function fechaHoyStr() {
+        const h = new Date();
+        return h.getFullYear() + '-' + String(h.getMonth()+1).padStart(2,'0') + '-' + String(h.getDate()).padStart(2,'0');
+    }
+
+    function formatearFecha(f) {
+        const [y,m,d] = f.split('-').map(Number);
+        const fecha = new Date(y,m-1,d);
+        return DIAS[fecha.getDay()] + ' ' + d + ' de ' + MESES[m-1] + ', ' + y;
+    }
+
+    // ===== VOZ =====
+    let recActivo = null;
+
+    function toggleMic(tid, bid, sid) {
+        const btn = document.getElementById(bid);
+        const status = document.getElementById(sid);
+        const ta = document.getElementById(tid);
+
+        if (recActivo) {
+            recActivo.stop();
+            recActivo = null;
+            btn.classList.remove('recording');
+            status.textContent = '';
+            return;
+        }
+
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+            status.textContent = 'Abre en Chrome para usar el microfono';
+            setTimeout(() => status.textContent = '', 4000);
+            return;
+        }
+
+        const rec = new SR();
+        rec.lang = 'es-CL';
+        rec.continuous = true;
+        rec.interimResults = true;
+
+        let base = ta.value;
+        let sep = base.length > 0 ? ' ' : '';
+
+        rec.onstart = () => {
+            btn.classList.add('recording');
+            status.textContent = 'Escuchando...';
+        };
+
+        rec.onresult = (e) => {
+            let interim = '', final = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                else interim += e.results[i][0].transcript;
+            }
+            if (final) {
+                base += sep + final;
+                sep = ' ';
+                ta.value = base;
+            }
+            if (interim) ta.value = base + sep + interim;
+        };
+
+        rec.onerror = (e) => {
+            const msgs = {
+                'not-allowed': 'Permite el microfono en tu navegador',
+                'no-speech': 'No se escucho nada. Toca de nuevo.'
+            };
+            status.textContent = msgs[e.error] || 'Error: ' + e.error;
+            btn.classList.remove('recording');
+            recActivo = null;
+            setTimeout(() => status.textContent = '', 4000);
+        };
+
+        rec.onend = () => {
+            btn.classList.remove('recording');
+            if (recActivo === rec) {
+                status.textContent = 'Listo';
+                recActivo = null;
+                setTimeout(() => status.textContent = '', 1500);
+            }
+        };
+
+        rec.start();
+        recActivo = rec;
+    }
+
+    function pararMic(bid, sid) {
+        if (recActivo) {
+            recActivo.stop();
+            recActivo = null;
+        }
+        document.getElementById(bid).classList.remove('recording');
+        document.getElementById(sid).textContent = '';
+    }
+
+    // ===== GUARDAR =====
+    function guardar() {
+        pararMic('micBtnHoy','micStatusHoy');
+        const t = document.getElementById('textoHoy').value.trim();
+        if (!t) { document.getElementById('textoHoy').focus(); return; }
+        const r = getRegistros();
+        r.push({ fecha: fechaHoyStr(), texto: t, timestamp: Date.now() });
+        saveRegistros(r);
+        document.getElementById('textoHoy').value = '';
+        mostrarToast('Guardado');
+        renderHistorial();
+    }
+
+    function guardarAnterior() {
+        pararMic('micBtnAnterior','micStatusAnterior');
+        const f = document.getElementById('fechaAnterior').value;
+        const t = document.getElementById('textoAnterior').value.trim();
+        if (!f) { document.getElementById('fechaAnterior').focus(); return; }
+        if (!t) { document.getElementById('textoAnterior').focus(); return; }
+        const r = getRegistros();
+        r.push({ fecha: f, texto: t, timestamp: Date.now() });
+        saveRegistros(r);
+        document.getElementById('textoAnterior').value = '';
+        document.getElementById('fechaAnterior').value = '';
+        cerrarModalDirecto();
+        mostrarToast('Guardado');
+        renderHistorial();
+    }
+
+    function eliminar(ts) {
+        if (!confirm('¿Eliminar este registro?')) return;
+        saveRegistros(getRegistros().filter(r => r.timestamp !== ts));
+        renderHistorial();
+    }
+
+    // ===== HISTORIAL =====
+    function renderHistorial() {
+        const registros = getRegistros();
+        const div = document.getElementById('historial');
+        if (!registros.length) {
+            div.innerHTML = '<div class="vacio"><div class="icono">📋</div>Sin registros aun.<br>Escribe o dicta tu primer reporte.</div>';
+            return;
+        }
+        registros.sort((a,b) => b.fecha !== a.fecha ? b.fecha.localeCompare(a.fecha) : b.timestamp - a.timestamp);
+        div.innerHTML = registros.map(r => `
+            <div class="registro">
+                <button class="reg-delete" onclick="eliminar(${r.timestamp})">&times;</button>
+                <div class="reg-fecha">${formatearFecha(r.fecha)}</div>
+                <div class="reg-texto">${escHtml(r.texto)}</div>
+            </div>`).join('');
+    }
+
+    function escHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    // ===== DESCARGAR =====
+    function descargarBitacora() {
+        const registros = getRegistros();
+        if (!registros.length) { mostrarToast('No hay registros'); return; }
+
+        registros.sort((a,b) => a.fecha.localeCompare(b.fecha) || a.timestamp - b.timestamp);
+
+        const porFecha = {};
+        registros.forEach(r => {
+            if (!porFecha[r.fecha]) porFecha[r.fecha] = [];
+            porFecha[r.fecha].push(r.texto);
+        });
+
+        let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Bitacora</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:'DM Sans',sans-serif;max-width:650px;margin:30px auto;padding:16px;color:#1e293b}
+h1{text-align:center;font-size:1.4rem;margin-bottom:4px}
+.sub{text-align:center;color:#64748b;margin-bottom:28px;font-size:.9rem}
+.dia{margin-bottom:20px;page-break-inside:avoid}
+.dia-f{font-weight:700;font-size:1rem;color:#2563eb;border-bottom:2px solid #e2e8f0;padding-bottom:4px;margin-bottom:8px}
+.dia-e{padding:6px 0 6px 14px;border-left:3px solid #e2e8f0;margin-bottom:4px;white-space:pre-wrap;line-height:1.5}
+@media print{body{margin:16px}}
+</style></head><body>
+<h1>Bitacora de Trabajo</h1>
+<div class="sub">Generada el ${formatearFecha(fechaHoyStr())}</div>`;
+
+        Object.keys(porFecha).sort().forEach(f => {
+            html += `<div class="dia"><div class="dia-f">${formatearFecha(f)}</div>`;
+            porFecha[f].forEach(t => html += `<div class="dia-e">${escHtml(t)}</div>`);
+            html += `</div>`;
+        });
+        html += `</body></html>`;
+
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Bitacora_' + fechaHoyStr() + '.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        mostrarToast('Descargado');
+    }
+
+    // ===== TOAST =====
+    function mostrarToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    // ===== MODAL =====
+    function abrirModal() {
+        document.getElementById('overlay').classList.add('active');
+        const a = new Date(); a.setDate(a.getDate()-1);
+        document.getElementById('fechaAnterior').value = a.getFullYear()+'-'+String(a.getMonth()+1).padStart(2,'0')+'-'+String(a.getDate()).padStart(2,'0');
+    }
+
+    function cerrarModal(e) { if (e.target === document.getElementById('overlay')) cerrarModalDirecto(); }
+
+    function cerrarModalDirecto() {
+        pararMic('micBtnAnterior','micStatusAnterior');
+        document.getElementById('overlay').classList.remove('active');
+    }
+
+    // Init
+    mostrarFecha();
+    renderHistorial();
+</script>
+</body>
+</html>
