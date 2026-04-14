@@ -4,7 +4,7 @@
 function getSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   // Intentar "Bitacora", si no existe usar la primera hoja
-  var sheet = ss.getSheetByName('Bitacora');
+  var sheet = ss.getSheetByName('PabloMora');
   if (!sheet) sheet = ss.getSheets()[0];
   return sheet;
 }
