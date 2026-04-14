@@ -192,7 +192,12 @@
             font-size: 0.8rem;
             color: var(--text-light);
             min-height: 32px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background 0.2s;
         }
+
+        .sync-bar:active { background: #e2e8f0; }
 
         .sync-bar .dot {
             width: 8px;
@@ -374,7 +379,7 @@
         <button class="btn btn-secondary" onclick="descargarBitacora()">Descargar</button>
     </div>
 
-    <div class="sync-bar" id="syncBar"></div>
+    <div class="sync-bar" id="syncBar" onclick="reintentarSync()"></div>
 
     <div class="card">
         <div class="historial-titulo">Registros anteriores</div>
@@ -445,7 +450,7 @@
             bar.innerHTML = '<div class="dot"></div> ' + msg;
             conectado = true;
         } else if (type === 'offline') {
-            bar.innerHTML = '<div class="dot offline"></div> ' + msg;
+            bar.innerHTML = '<div class="dot offline"></div> ' + msg + ' (toca para reintentar)';
             conectado = false;
         } else if (type === 'error') {
             bar.innerHTML = '<div class="dot error"></div> ' + msg;
@@ -557,7 +562,7 @@
                 throw new Error(data.error || 'Error');
             }
         } catch (err) {
-            setSyncStatus('offline', 'Sin conexion - usando datos locales');
+            setSyncStatus('offline', 'Error: ' + err.message);
             registrosCache = getLocal();
         }
         renderHistorial();
@@ -796,6 +801,16 @@ h1{text-align:center;font-size:1.4rem;margin-bottom:4px}
     function cerrarModalDirecto() {
         pararMic('micBtnAnterior','micStatusAnterior');
         document.getElementById('overlay').classList.remove('active');
+    }
+
+    // ===== REINTENTAR SYNC =====
+    async function reintentarSync() {
+        if (getPendientes().length) {
+            await sincronizarPendientes();
+            await cargarDesdeSheets();
+        } else {
+            await cargarDesdeSheets();
+        }
     }
 
     // ===== DETECTAR CONEXION =====

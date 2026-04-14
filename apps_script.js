@@ -1,115 +1,93 @@
 // Google Apps Script - Bitacora de Trabajo
-// Pegar esto en Extensiones > Apps Script de tu Google Sheet
-// Luego: Implementar > Aplicacion web > Ejecutar como Yo > Cualquier persona con cuenta Google
+// Pegar en Apps Script > Guardar > Implementar como Aplicacion Web
 
-const HOJA = 'Bitacora';
+function getSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Intentar "Bitacora", si no existe usar la primera hoja
+  var sheet = ss.getSheetByName('Bitacora');
+  if (!sheet) sheet = ss.getSheets()[0];
+  return sheet;
+}
 
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(HOJA);
+    var data = JSON.parse(e.postData.contents);
+    var sheet = getSheet();
 
     if (data.action === 'agregar') {
-      sheet.appendRow([
-        data.fecha,
-        data.texto,
-        data.timestamp,
-        new Date().toISOString()
-      ]);
-      return jsonResponse({ ok: true });
+      sheet.appendRow([data.fecha, data.texto, data.timestamp, new Date().toISOString()]);
+      return resp({ ok: true });
     }
 
     if (data.action === 'eliminar') {
-      const rows = sheet.getDataRange().getValues();
-      for (let i = rows.length - 1; i >= 1; i--) {
+      var rows = sheet.getDataRange().getValues();
+      for (var i = rows.length - 1; i >= 1; i--) {
         if (Number(rows[i][2]) === Number(data.timestamp)) {
           sheet.deleteRow(i + 1);
           break;
         }
       }
-      return jsonResponse({ ok: true });
+      return resp({ ok: true });
     }
 
-    return jsonResponse({ ok: false, error: 'Accion no reconocida' });
+    return resp({ ok: false, error: 'Accion no reconocida' });
   } catch (err) {
-    return jsonResponse({ ok: false, error: err.toString() });
+    return resp({ ok: false, error: err.toString() });
   }
 }
 
 function doGet(e) {
   try {
-    const params = e.parameter || {};
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(HOJA);
+    var params = e.parameter || {};
+    var sheet = getSheet();
 
-    // Si viene con accion=agregar via GET (fallback para CORS)
+    // Agregar via GET
     if (params.action === 'agregar' && params.fecha && params.texto && params.timestamp) {
-      sheet.appendRow([
-        params.fecha,
-        params.texto,
-        Number(params.timestamp),
-        new Date().toISOString()
-      ]);
-      // Devolver JSONP si hay callback
-      if (params.callback) {
-        return ContentService
-          .createTextOutput(params.callback + '(' + JSON.stringify({ ok: true }) + ')')
-          .setMimeType(ContentService.MimeType.JAVASCRIPT);
-      }
-      return jsonResponse({ ok: true });
+      sheet.appendRow([params.fecha, params.texto, Number(params.timestamp), new Date().toISOString()]);
+      return respCb(params.callback, { ok: true });
     }
 
-    // Si viene con accion=eliminar via GET
+    // Eliminar via GET
     if (params.action === 'eliminar' && params.timestamp) {
-      const rows = sheet.getDataRange().getValues();
-      for (let i = rows.length - 1; i >= 1; i--) {
+      var rows = sheet.getDataRange().getValues();
+      for (var i = rows.length - 1; i >= 1; i--) {
         if (Number(rows[i][2]) === Number(params.timestamp)) {
           sheet.deleteRow(i + 1);
           break;
         }
       }
-      if (params.callback) {
-        return ContentService
-          .createTextOutput(params.callback + '(' + JSON.stringify({ ok: true }) + ')')
-          .setMimeType(ContentService.MimeType.JAVASCRIPT);
-      }
-      return jsonResponse({ ok: true });
+      return respCb(params.callback, { ok: true });
     }
 
-    // Default: devolver todos los registros
-    const data = sheet.getDataRange().getValues();
-    const registros = [];
-    for (let i = 1; i < data.length; i++) {
+    // Listar registros
+    var data = sheet.getDataRange().getValues();
+    var registros = [];
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '' && data[i][1] === '') continue;
       registros.push({
         fecha: String(data[i][0]),
         texto: String(data[i][1]),
-        timestamp: Number(data[i][2])
+        timestamp: Number(data[i][2]) || 0
       });
     }
 
-    const result = { ok: true, registros: registros };
-
-    if (params.callback) {
-      return ContentService
-        .createTextOutput(params.callback + '(' + JSON.stringify(result) + ')')
-        .setMimeType(ContentService.MimeType.JAVASCRIPT);
-    }
-    return jsonResponse(result);
+    return respCb(params.callback, { ok: true, registros: registros });
 
   } catch (err) {
-    const errResult = { ok: false, error: err.toString(), registros: [] };
-    if ((e.parameter || {}).callback) {
-      return ContentService
-        .createTextOutput(e.parameter.callback + '(' + JSON.stringify(errResult) + ')')
-        .setMimeType(ContentService.MimeType.JAVASCRIPT);
-    }
-    return jsonResponse(errResult);
+    var cb = (e.parameter || {}).callback;
+    return respCb(cb, { ok: false, error: err.toString(), registros: [] });
   }
 }
 
-function jsonResponse(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+function resp(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function respCb(callback, obj) {
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + '(' + JSON.stringify(obj) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return resp(obj);
 }
