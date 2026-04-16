@@ -1,18 +1,26 @@
 // Google Apps Script - Bitacora de Trabajo
-// Pegar en Apps Script > Guardar > Implementar como Aplicacion Web
+// Cada trabajador escribe en su propia pestaña
 
-function getSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  // Intentar "Bitacora", si no existe usar la primera hoja
-  var sheet = ss.getSheetByName('PabloMora');
-  if (!sheet) sheet = ss.getSheets()[0];
+var SPREADSHEET_ID = '1S3rYKrtKGJWbYGH6APYS44ztHs7EmaBkOGwNjxzpb_o';
+
+function getSheet(worker) {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var nombre = worker || 'General';
+  var sheet = ss.getSheetByName(nombre);
+
+  // Si no existe la pestaña, crearla con encabezados
+  if (!sheet) {
+    sheet = ss.insertSheet(nombre);
+    sheet.appendRow(['fecha', 'texto', 'timestamp', 'fechaRegistro']);
+  }
+
   return sheet;
 }
 
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var sheet = getSheet();
+    var sheet = getSheet(data.worker);
 
     if (data.action === 'agregar') {
       sheet.appendRow([data.fecha, data.texto, data.timestamp, new Date().toISOString()]);
@@ -39,15 +47,13 @@ function doPost(e) {
 function doGet(e) {
   try {
     var params = e.parameter || {};
-    var sheet = getSheet();
+    var sheet = getSheet(params.worker);
 
-    // Agregar via GET
     if (params.action === 'agregar' && params.fecha && params.texto && params.timestamp) {
       sheet.appendRow([params.fecha, params.texto, Number(params.timestamp), new Date().toISOString()]);
       return respCb(params.callback, { ok: true });
     }
 
-    // Eliminar via GET
     if (params.action === 'eliminar' && params.timestamp) {
       var rows = sheet.getDataRange().getValues();
       for (var i = rows.length - 1; i >= 1; i--) {
@@ -59,7 +65,6 @@ function doGet(e) {
       return respCb(params.callback, { ok: true });
     }
 
-    // Listar registros
     var data = sheet.getDataRange().getValues();
     var registros = [];
     for (var i = 1; i < data.length; i++) {

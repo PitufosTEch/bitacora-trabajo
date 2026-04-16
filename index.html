@@ -360,6 +360,7 @@
         <div class="dia-nombre" id="diaNombre"></div>
         <div class="dia-numero" id="diaNumero"></div>
         <div class="mes-anio" id="mesAnio"></div>
+        <div id="workerName" style="margin-top:6px;font-size:0.85rem;opacity:0.75;letter-spacing:1px;text-transform:uppercase;"></div>
     </div>
 
     <div class="card">
@@ -416,8 +417,12 @@
 
     const DIAS = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
     const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const STORAGE_KEY = 'bitacora_registros';
-    const PENDING_KEY = 'bitacora_pendientes';
+
+    // Detectar trabajador desde la URL (?worker=NombreApellido)
+    const URL_PARAMS = new URLSearchParams(window.location.search);
+    const WORKER = URL_PARAMS.get('worker') || 'General';
+    const STORAGE_KEY = 'bitacora_' + WORKER;
+    const PENDING_KEY = 'bitacora_pending_' + WORKER;
 
     let registrosCache = [];
     let conectado = false;
@@ -529,7 +534,7 @@
                 resolve(data);
             };
 
-            const qs = new URLSearchParams({ ...params, callback: cbName }).toString();
+            const qs = new URLSearchParams({ ...params, worker: WORKER, callback: cbName }).toString();
             const script = document.createElement('script');
             script.id = cbName;
             script.src = APPS_SCRIPT_URL + '?' + qs;
@@ -830,6 +835,7 @@ h1{text-align:center;font-size:1.4rem;margin-bottom:4px}
 
     // ===== INIT =====
     mostrarFecha();
+    document.getElementById('workerName').textContent = WORKER !== 'General' ? WORKER : '';
     cargarDesdeSheets().then(() => {
         if (conectado && getPendientes().length) {
             sincronizarPendientes();
