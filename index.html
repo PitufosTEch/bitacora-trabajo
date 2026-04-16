@@ -420,7 +420,7 @@
 
     // Detectar trabajador desde la URL (?worker=NombreApellido)
     const URL_PARAMS = new URLSearchParams(window.location.search);
-    const WORKER = URL_PARAMS.get('worker') || 'General';
+    const WORKER = URL_PARAMS.get('worker') || 'PabloMora';
     const STORAGE_KEY = 'bitacora_' + WORKER;
     const PENDING_KEY = 'bitacora_pending_' + WORKER;
 
